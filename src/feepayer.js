@@ -25,7 +25,7 @@ module.exports = async (evmpp, _message) => {
         t.nonce,
         t.gasLimit,
         t.v, t.r, t.s, {
-            gasPrice: t.gasPrice,
+            // gasPrice: t.gasPrice,
             value: t.value
         },
     )
