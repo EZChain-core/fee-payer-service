@@ -18,8 +18,8 @@ module.exports = () => {
 
     const uri = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
     console.log(`uri: ${uri} topic: ${process.env.TOPIC}`)
+    
     const subscriber = MQTT.connect(uri)
-
     subscriber.on('connect', async () => {
         await subscriber.subscribe(`${process.env.TOPIC}`, (err) => {
             if (err) {
