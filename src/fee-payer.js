@@ -1,32 +1,22 @@
 const { ethers } = require('ethers')
-const { getWallet } = require('../lib/accounts')
-const { createEVMPP } = require('../lib/evmpp')
-
+const { abi } = require('../abis/fee-payer.json');
 const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
 const provider = new ethers.providers.JsonRpcProvider(RPC)
-const nocoin = new ethers.Wallet.createRandom().connect(provider)
 
-module.exports = async (evmpp, _message) => {
-    const message = JSON.parse(_message)
-    const tx = {
-        chainId: message["chainId"],
-        to: message["to"],
-        gasLimit: message["gasLimit"],
-        gasPrice: message["gasPrice"],
-        nonce: message["nonce"],
-        value: message["value"]
-    }
+const ADDRESS = process.env.ADDRESS
+const contract = new ethers.Contract(ADDRESS, abi, provider.getSigner())
 
-    const rawSignedTx = await nocoin.signTransaction(tx)
-    const t = ethers.utils.parseTransaction(rawSignedTx)
-    const res = await evmpp.payFor(
-        t.to,
-        t.data,
-        t.nonce,
-        t.gasLimit,
-        t.v, t.r, t.s, {
-            value: t.value
+module.exports = async (message) => {
+    const tx = JSON.parse(message)
+    const res = await contract.payFor(
+        tx["to"],
+        tx["data"],
+        tx["nonce"],
+        tx["gasLimit"],
+        tx["v"], tx["r"], tx["s"], {
+            value: tx["value"]
         },
     )
-    await res.wait(1);
+    const receipt = await res.wait(1);
+    console.log(`receipt ${receipt}`)
 }
