@@ -3,8 +3,8 @@ const { abi } = require('../abis/fee-payer.json');
 const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
 const provider = new ethers.providers.JsonRpcProvider(RPC)
 
-const ADDRESS = process.env.ADDRESS
-const contract = new ethers.Contract(ADDRESS, abi, provider.getSigner())
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const contract = new ethers.Contract(process.env.ADDRESS, abi, wallet)
 
 module.exports = async (message) => {
     const tx = JSON.parse(message)
@@ -18,5 +18,5 @@ module.exports = async (message) => {
         },
     )
     const receipt = await res.wait(1);
-    console.log(`receipt ${receipt}`)
+    console.log(`receipt ${JSON.stringify(receipt)}`)
 }
