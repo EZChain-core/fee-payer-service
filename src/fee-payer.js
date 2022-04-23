@@ -8,10 +8,10 @@ const contract = new ethers.Contract(process.env.ADDRESS, abi, wallet)
 
 const txSchema = {
     nonce: value => parseInt(value) === Number(value),
-    gasPrice: value => ethers.utils.isHexString(value),
-    gasLimit: value => ethers.utils.isHexString(value),
+    gasPrice: value => ethers.utils.isHexString(value._hex),
+    gasLimit: value => ethers.utils.isHexString(value._hex),
     to: value => ethers.utils.isAddress(value),
-    value: value => ethers.utils.isHexString(value),
+    value: value => ethers.utils.isHexString(value._hex),
     data: value => ethers.utils.isHexString(value),
     chainId: value => parseInt(value) === Number(value),
     v: value => parseInt(value) === Number(value),
@@ -28,24 +28,30 @@ const validate = (object, schema) => Object
 
 
 module.exports = async (message) => {
-    const tx = JSON.parse(message)
+    let isValidSchema = false
+    const tx = ethers.utils.parseTransaction(`0x${message}`)
     const errors = validate(tx, txSchema)
     if (errors.length > 0) {
         for (const { message } of errors) {
             console.log(message);
         }
-        return
+        return [isValidSchema, false]
     }
+
+    isValidSchema = true
+
+    const nonce = await wallet.getTransactionCount('pending')
 
     const res = await contract.payFor(
         tx["to"],
         tx["data"],
         tx["nonce"],
-        tx["gasLimit"],
+        tx["gasLimit"]["_hex"],
         tx["v"], tx["r"], tx["s"], {
-            value: tx["value"]
+            value: tx["value"]["_hex"]
         },
     )
-    const receipt = await res.wait(1);
-    console.log(`receipt ${JSON.stringify(receipt)}`)
+    await res.wait(1);
+    const newNonce = await wallet.getTransactionCount('pending')
+    return [isValidSchema, (nonce + 1) === newNonce]
 }
