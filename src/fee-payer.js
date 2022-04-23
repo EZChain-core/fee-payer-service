@@ -29,7 +29,7 @@ const validate = (object, schema) => Object
 
 module.exports = async (message) => {
     let isValidSchema = false
-    const tx = ethers.utils.parseTransaction(`0x${message}`)
+    const tx = ethers.utils.parseTransaction(`${message}`)
     const errors = validate(tx, txSchema)
     if (errors.length > 0) {
         for (const { message } of errors) {
