@@ -53,5 +53,6 @@ module.exports = async (message) => {
     )
     await res.wait(1);
     const newNonce = await wallet.getTransactionCount('pending')
+
     return [isValidSchema, (nonce + 1) === newNonce]
 }
