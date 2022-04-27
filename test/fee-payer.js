@@ -3,7 +3,7 @@ const { ethers } = require('ethers');
 
 const assert = require('assert')
 const MQTT = require('async-mqtt')
-const feePayer = require('../src/fee-payer')
+const { wrapTx } = require('../src/fee-payer')
 
 const MQTT_URI = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
 const MQTT_TOPIC = process.env.TOPIC
@@ -116,7 +116,10 @@ describe("Integration test with chain", () => {
             await client.subscribe(`${MQTT_TOPIC}/#`)
         })
 
-        chainId = await provider.getNetwork().chainId
+        
+        chainId = await provider.getNetwork()
+        chainId = chainId.chainId
+        console.log(`ChainID ${JSON.stringify(chainId)}`)
        
     })
     
@@ -137,6 +140,23 @@ describe("Integration test with chain", () => {
             { reason: 'insufficient funds for intrinsic transaction cost' },
         )
 
+        client.on("message", async (topic, message) => {
+            console.log(`Topic : ${topic} Message: ${message}`)
+            const [isValidSchema, isFeePayer] = await wrapTx(message)
+            
+            assert.equal(isValidSchema, true, 'Wrong format schema tx')
+            assert.equal(isFeePayer, true, 'Payfor function failed')
+            console.log(`Valid Topic : ${isValidSchema} Message: ${isValidSchema}`)
+            try {
+                const newNonce = await nocoin.getTransactionCount('pending')
+                assert.equal(newNonce, nonce + 1, 'Nocoin tx failed')
+            } catch (err) {
+                console.log(err)
+            }
+            done()
+        })
+
+
         const nonce = await nocoin.getTransactionCount('pending')
 
         const tx = {
@@ -145,24 +165,8 @@ describe("Integration test with chain", () => {
             gasLimit: 21000,
             gasPrice: 0,
             nonce,
+            type: 0
         }
-
-        client.on("message", async (topic, message) => {
-            console.log(`Topic : ${topic} Message: ${message}`)
-            const [isValidSchema, isFeePayer] = await feePayer(message)
-            
-            assert.equal(isValidSchema, true, 'Wrong format schema tx')
-            assert.equal(isFeePayer, true, 'Payfor function failed')
-            
-            try {
-                const newNonce = await nocoin.getTransactionCount('pending')
-                assert.equal(newNonce, nonce + 1, 'Nocoin tx failed')
-            } catch (err) {
-                console.log(err)
-            }
-            
-            done()
-        })
 
         await nocoin.sendTransaction(tx)
 

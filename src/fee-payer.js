@@ -27,9 +27,22 @@ const validate = (object, schema) => Object
     .map(key => Error(`${key} is invalid.`));
 
 
-module.exports = async (message) => {
+const getTx = async (txHash) => {
+    const txReceipt = await provider.waitForTransaction(txHash)
+    return txReceipt
+}
+
+const validateTx = async (txHash) => {
+    const receipt = await provider.waitForTransaction(txHash)
+    if ((receipt.status === 1) && (receipt.logs.length > 0)) {
+        return true
+    }
+    return false
+}
+
+const wrapTx = async (message) => {
     try {
-        
+
         let isValidSchema = false
         const tx = ethers.utils.parseTransaction(`${message}`)
         console.log(JSON.stringify(tx))
@@ -55,9 +68,9 @@ module.exports = async (message) => {
             },
         )
 
-        await res.wait(1);
+        const rp = await res.wait(1);
+        console.log(`OKe: ${JSON.stringify(rp)}`)
         const newNonce = await wallet.getTransactionCount('pending')
-
         return [isValidSchema, (nonce + 1) === newNonce]
 
     } catch (err) {
@@ -65,5 +78,10 @@ module.exports = async (message) => {
     }
 
     return [false, false]
-    
+}
+
+module.exports = {
+    getTx: getTx,
+    wrapTx: wrapTx,
+    validateTx: validateTx
 }

@@ -1,5 +1,5 @@
 const MQTT = require('async-mqtt')
-const feePayer = require('./fee-payer')
+const { wrapTx } = require('./fee-payer')
 
 
 module.exports = () => {
@@ -8,7 +8,7 @@ module.exports = () => {
 
     const subscriber = MQTT.connect(uri)
     subscriber.on('connect', async () => {
-        await subscriber.subscribe(`${process.env.TOPIC}`, (err) => {
+        await subscriber.subscribe(`${process.env.TOPIC}/#`, (err) => {
             if (err) {
                 console.log(`Subscriber can't connect with error:  ${err}`)
                 return
@@ -19,7 +19,7 @@ module.exports = () => {
     
     subscriber.on('message', async (topic, message) => {
         console.log(`Topic: ${topic} message: ${message.toString()}`)
-        await feePayer(message.toString())
+        await wrapTx(message.toString())
     })
 
     subscriber.on('close', () => { 
