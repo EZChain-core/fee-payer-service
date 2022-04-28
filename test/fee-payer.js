@@ -3,7 +3,7 @@ const { ethers } = require('ethers');
 
 const assert = require('assert')
 const MQTT = require('async-mqtt')
-const { wrapTx } = require('../src/fee-payer')
+const { wrapTx } = require('../src/usecases/fee-payer')
 
 const MQTT_URI = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
 const MQTT_TOPIC = process.env.TOPIC

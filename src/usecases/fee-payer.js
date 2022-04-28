@@ -1,10 +1,17 @@
 const { ethers } = require('ethers')
-const { abi } = require('../abis/fee-payer.json');
+const { abi } = require('../../abis/fee-payer.json');
+const { incrTxNum, getValue } = require('../connections/redis');
+const { sendAlert } = require('../connections/telegram');
+
 const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
 const provider = new ethers.providers.JsonRpcProvider(RPC)
 
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(process.env.ADDRESS, abi, wallet)
+
+const minFeeAlert = process.env.MINIMUM_FEE_ALERT
+
+const fetchBalanceTxTimes = process.env.FETCH_BALANCE_TX_TIMES
 
 const txSchema = {
     nonce: value => parseInt(value) === Number(value),
@@ -40,12 +47,22 @@ const validateTx = async (txHash) => {
     return false
 }
 
+const handleAlert = async (address) => {
+    const txNum = await getValue(address)
+    if (txNum % fetchBalanceTxTimes == 0 ) {
+        const balance = await provider.getBalance(address)
+        if (balance < minFeeAlert) {
+            await sendAlert(address, balance)
+        }
+    }
+    await incrTxNum(address)
+}
+
 const wrapTx = async (message) => {
     try {
 
         let isValidSchema = false
         const tx = ethers.utils.parseTransaction(`${message}`)
-        console.log(JSON.stringify(tx))
         const errors = validate(tx, txSchema)
         if (errors.length > 0) {
             for (const { message } of errors) {
@@ -68,9 +85,12 @@ const wrapTx = async (message) => {
             },
         )
 
-        const rp = await res.wait(1);
-        console.log(`OKe: ${JSON.stringify(rp)}`)
+        await res.wait(1);
+
         const newNonce = await wallet.getTransactionCount('pending')
+
+        await handleAlert(tx["from"])
+        
         return [isValidSchema, (nonce + 1) === newNonce]
 
     } catch (err) {
@@ -79,6 +99,7 @@ const wrapTx = async (message) => {
 
     return [false, false]
 }
+
 
 module.exports = {
     getTx: getTx,
