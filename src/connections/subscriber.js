@@ -1,11 +1,11 @@
 const MQTT = require('async-mqtt')
 const { wrapTx } = require('../usecases/fee-payer')
 
-module.exports = () => {
-    const uri = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
-    console.log(`MQTT CONNECT: ${uri} topic: ${process.env.TOPIC}`)
+const uri = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
+console.log(`MQTT CONNECT: ${uri} topic: ${process.env.TOPIC}`)
+const subscriber = MQTT.connect(uri)
 
-    const subscriber = MQTT.connect(uri)
+const init = () => {
     subscriber.on('connect', async () => {
         await subscriber.subscribe(`${process.env.TOPIC}/#`, (err) => {
             if (err) {
@@ -28,4 +28,13 @@ module.exports = () => {
     subscriber.on('reconnect', () => { 
         console.log('Subscriber trying a reconnection') 
     }) 
+}
+
+const close = () => {
+    subscriber.end()
+}
+
+module.exports = {
+    initMQTTConn: init,
+    closeMQTTConn: close
 }

@@ -22,8 +22,8 @@ const getValue = async (key) => {
 }
 
 module.exports = {
-    initRedisConnection: initConnection,
-    closeRedisConnection: closeConnection,
+    initRedisConn: initConnection,
+    closeRedisConn: closeConnection,
     incrTxNum: incrTxNum,
     getValue: getValue
 }

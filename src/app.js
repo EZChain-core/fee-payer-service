@@ -1,16 +1,13 @@
 require('dotenv').config()
 
 const { getTx } = require('./usecases/fee-payer')
-const subscribe = require('./connections/subscriber')
-const { initRedisConnection } = require('./connections/redis')
+const { initConnection, closeConnection } = require('.//connections/index')
 
 const express = require('express')
 const app = express()
 const port = 3000
 
-subscribe()
-
-initRedisConnection()
+initConnection()
 
 app.get('/', (req, res) => {
     res.send('FeePayer Service')
