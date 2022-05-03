@@ -9,7 +9,7 @@ const initConnection = async () => {
 }
 
 const closeConnection = async () => {
-    await client.closeConnection()
+    await client.quit()
 }
 
 const incrTxNum = async (address) => {
