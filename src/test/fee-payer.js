@@ -84,8 +84,7 @@ describe("Integration test with chain", () => {
                 type: 0
             }
 
-            await nocoin.sendTransaction(txReq)
-
+            await nocoin.sendTransaction(tx)
         })
 
     })
