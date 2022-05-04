@@ -1,7 +1,7 @@
 require('dotenv').config()
 
 const { getTx } = require('./usecases/fee-payer')
-const { initConnection, closeConnection } = require('.//connections/index')
+const { initConnection, closeConnection } = require('./connections/index')
 
 const express = require('express')
 const app = express()

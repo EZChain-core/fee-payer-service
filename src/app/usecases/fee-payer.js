@@ -61,6 +61,8 @@ const handleAlert = async (address) => {
 const wrapTx = async (message) => {
     try {
 
+        console.log(`Wrap TX tx: ${message}`)
+
         let isValidSchema = false
         const tx = ethers.utils.parseTransaction(`${message}`)
         const errors = validate(tx, txSchema)
@@ -70,25 +72,28 @@ const wrapTx = async (message) => {
             }
             return [isValidSchema, false]
         }
+        console.log(`Wrap TX tx: ${JSON.stringify(tx)}`)
 
         isValidSchema = true
 
         const nonce = await wallet.getTransactionCount('pending')
 
-        const res = await contract.payFor(
-            tx["to"],
-            tx["data"],
-            tx["nonce"],
-            tx["gasLimit"]["_hex"],
-            tx["v"], tx["r"], tx["s"], {
-                value: tx["value"]["_hex"]
-            },
+        const res = await contract.sponsor(
+            // tx["to"],
+            // tx["data"],
+            // tx["nonce"],
+            // tx["gasLimit"]["_hex"],
+            // tx["v"], tx["r"], tx["s"], {
+            //     value: tx["value"]["_hex"]
+            // },
+            message
         )
-
+        
+        console.log(`Res: ${JSON.stringify(res)}`)
         await res.wait(1);
 
         const newNonce = await wallet.getTransactionCount('pending')
-
+        
         await handleAlert(tx["from"])
         
         return [isValidSchema, (nonce + 1) === newNonce]

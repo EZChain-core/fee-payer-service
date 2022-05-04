@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/app.js",
-    "test": "mocha --timeout 15000"
+    "start": "node src/app/index.js",
+    "test": "mocha src/test/*.js --timeout 15000"
   },
   "author": "lamtt2403 <lamtt2403@gmail.com>",
   "license": "ISC",
