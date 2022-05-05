@@ -58,51 +58,37 @@ const handleAlert = async (address) => {
     await incrTxNum(address)
 }
 
-const wrapTx = async (message) => {
-    try {
-
-        console.log(`Wrap TX tx: ${message}`)
-
-        let isValidSchema = false
-        const tx = ethers.utils.parseTransaction(`${message}`)
-        const errors = validate(tx, txSchema)
-        if (errors.length > 0) {
-            for (const { message } of errors) {
-                console.log(message);
-            }
-            return [isValidSchema, false]
+const wrapTx = async (rawSignedTx) => {
+    let isValidSchema = false
+    const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
+    const errors = validate(tx, txSchema)
+    if (errors.length > 0) {
+        for (const { message } of errors) {
+            console.log(message);
         }
-        console.log(`Wrap TX tx: ${JSON.stringify(tx)}`)
-
-        isValidSchema = true
-
-        const nonce = await wallet.getTransactionCount('pending')
-
-        const res = await contract.sponsor(
-            // tx["to"],
-            // tx["data"],
-            // tx["nonce"],
-            // tx["gasLimit"]["_hex"],
-            // tx["v"], tx["r"], tx["s"], {
-            //     value: tx["value"]["_hex"]
-            // },
-            message
-        )
-        
-        console.log(`Res: ${JSON.stringify(res)}`)
-        await res.wait(1);
-
-        const newNonce = await wallet.getTransactionCount('pending')
-        
-        await handleAlert(tx["from"])
-        
-        return [isValidSchema, (nonce + 1) === newNonce]
-
-    } catch (err) {
-        console.log(err)
+        return [isValidSchema, false]
     }
 
-    return [false, false]
+    isValidSchema = true
+
+    try {
+        await contract.callStatic.sponsor(rawSignedTx)
+    } catch (err) {
+        console.log(err)
+        return [isValidSchema, false]
+    }
+
+    const nonce = await wallet.getTransactionCount('pending')
+
+    const res = await contract.sponsor(rawSignedTx)
+    
+    await res.wait(1);
+
+    const newNonce = await wallet.getTransactionCount('pending')
+    
+    await handleAlert(tx["from"])
+    
+    return [isValidSchema, (nonce + 1) === newNonce]
 }
 
 
