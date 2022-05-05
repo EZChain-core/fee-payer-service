@@ -57,7 +57,7 @@ describe("Integration test with chain", () => {
             client.on("message", async (topic, message) => {
 
                 try {
-                    const [isValidSchema, isFeePayer] = await wrapTx(message)
+                    const [isValidSchema, isFeePayer] = await wrapTx(message.toString())
                     assert.equal(isValidSchema, true, 'Wrong format schema tx')
                     assert.equal(isFeePayer, true, 'Payfor function failed')
                     
