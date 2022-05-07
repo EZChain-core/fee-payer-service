@@ -89,7 +89,7 @@ function anyGtOne(logs) {
         }
 
         const logDesc = sgold.interface.parseLog({ topics: log.topics, data: log.data });
-        if (logDesc.name == 'Transfer' && logDesc.args[2].gte(ethers.utils.parseEther('1'))) {
+        if (logDesc.name == 'Transfer' && logDesc.args[2].gt(0)) {
             return true
         }
     }
