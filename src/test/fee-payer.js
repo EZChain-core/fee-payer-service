@@ -92,7 +92,7 @@ describe("Integration test with chain", () => {
             await client.subscribe(`${MQTT_TOPIC}/#`)
             const nocoin = new ethers.Wallet.createRandom().connect(provider)
 
-            const r = await sgold.connect(wallet).transfer(nocoin.address, "10")
+            const r = await sgold.connect(wallet).transfer(nocoin.address, ethers.utils.parseEther('10'))
             await r.wait(1)
 
             client.on("message", async (topic, message) => {
@@ -122,7 +122,7 @@ describe("Integration test with chain", () => {
                 gasLimit: 400000,
                 gasPrice: 0,
                 nonce,
-                data: sgold.interface.encodeFunctionData("transfer", [dummy.address, 3]),
+                data: sgold.interface.encodeFunctionData("transfer", [dummy.address, ethers.utils.parseEther('1.1')]),
             }
 
             await nocoin.sendTransaction(tx)
