@@ -15,7 +15,6 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(process.env.ADDRESS, abi, wallet)
 
 const minFeeAlert = process.env.MINIMUM_FEE_ALERT
-
 const fetchBalanceTxTimes = process.env.FETCH_BALANCE_TX_TIMES
 const callLogsAccessList = [{
     address: "0x5555555555555555555555555555555555555555",
@@ -52,8 +51,7 @@ const txSchema = {
 const validate = (object, schema) => Object
     .keys(schema)
     .filter(key => !schema[key](object[key]))
-    .map(key => Error(`${key} is invalid.`));
-
+    .map(key => Error(`${key} is invalid.`))
 
 const getTx = async (txHash) => {
     const txReceipt = await provider.waitForTransaction(txHash)
@@ -68,11 +66,16 @@ const validateTx = async (txHash) => {
     return false
 }
 
+const getBalance = async (address) => {
+    const balance = await provider.getBalance(address)
+    return ethers.utils.formatEther(balance)
+}
+
 const handleAlert = async (address) => {
     const txNum = await getValue(address)
-    if (txNum % fetchBalanceTxTimes == 0) {
-        const balance = await provider.getBalance(address)
-        if (balance < minFeeAlert) {
+    if (txNum % fetchBalanceTxTimes == 0 ) {
+        const balance = await getBalance(address)
+        if (balance <= minFeeAlert) {
             await sendAlert(address, balance)
         }
     }
@@ -137,5 +140,6 @@ const wrapTx = async (rawSignedTx) => {
 module.exports = {
     getTx: getTx,
     wrapTx: wrapTx,
-    validateTx: validateTx
+    validateTx: validateTx,
+    getBalance: getBalance
 }
