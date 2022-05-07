@@ -6,6 +6,7 @@ const EVMPP = "0x5555555555555555555555555555555555555555"
 exports.createEVMPP = (signerOrProvider, opts) => {
     let callBatchReturns = ""
     let payForReturns = ""
+    let sponsorReturns = ""
 
     if (opts.returns.callBatch) {
         callBatchReturns = `returns (${opts.returns.callBatch})`
@@ -13,7 +14,9 @@ exports.createEVMPP = (signerOrProvider, opts) => {
     if (opts?.returns?.payFor) {
         payForReturns = `returns (${opts.returns.payFor})`
     }
-
+    if (opts?.returns?.sponsor) {
+        sponsorReturns = `returns (${opts.returns.sponsor})`
+    }
 
     const result = compile(`
         struct Tx {
@@ -22,6 +25,8 @@ exports.createEVMPP = (signerOrProvider, opts) => {
             uint256 value;	// ether value to transfer
         }
         function callBatch(Tx[] calldata txs) external ${callBatchReturns} {}
+
+        function sponsor(bytes calldata data) payable external ${sponsorReturns} {}
 
         function payFor(
             address to,

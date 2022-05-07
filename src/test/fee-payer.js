@@ -5,6 +5,7 @@ const assert = require('assert')
 const MQTT = require('async-mqtt')
 const { wrapTx } = require('../app/usecases/fee-payer')
 const { initRedisConn, closeRedisConn } = require('../app/connections/redis')
+const { ERC20ABI } = require('../abis/erc20.json');
 
 const MQTT_URI = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
 const MQTT_TOPIC = process.env.TOPIC
@@ -13,13 +14,16 @@ const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
 const provider = new ethers.providers.JsonRpcProvider(RPC)
 const nocoin = new ethers.Wallet.createRandom().connect(provider)
 const dummy = new ethers.Wallet.createRandom()
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+
+const sgold = new ethers.Contract(process.env.SGOLD_CONTRACT, ERC20ABI, provider);
 
 describe("Integration test with chain", () => {
     let chainId
     let client
 
-    before( async () => {
-        client = await MQTT.connect(MQTT_URI) 
+    before(async () => {
+        client = await MQTT.connect(MQTT_URI)
         client.on('connect', async () => {
             assert.equal(client.connected, true, 'Connection failed')
         })
@@ -30,8 +34,8 @@ describe("Integration test with chain", () => {
 
         await initRedisConn()
     })
-    
-    after( async () => {
+
+    after(async () => {
         if (client) {
             client.on('close', () => {
                 console.log('Connection closed')
@@ -59,8 +63,45 @@ describe("Integration test with chain", () => {
                 try {
                     const [isValidSchema, isFeePayer] = await wrapTx(message.toString())
                     assert.equal(isValidSchema, true, 'Wrong format schema tx')
+                    assert.equal(isFeePayer, false, 'Payfor not proceed')
+
+                    resolve()
+                } catch (err) {
+                    console.log(err)
+                    reject()
+                }
+
+            })
+
+            const nonce = await nocoin.getTransactionCount('pending')
+
+            const tx = {
+                chainId,
+                to: dummy.address,
+                gasLimit: 21000,
+                gasPrice: 0,
+                nonce,
+                type: 0,
+            }
+            await nocoin.sendTransaction(tx)
+        })
+    })
+
+    it("sgold", () => {
+        return new Promise(async (resolve, reject) => {
+            await client.subscribe(`${MQTT_TOPIC}/#`)
+            const nocoin = new ethers.Wallet.createRandom().connect(provider)
+
+            const r = await sgold.connect(wallet).transfer(nocoin.address, 10)
+            await r.wait(1)
+
+            client.on("message", async (topic, message) => {
+
+                try {
+                    const [isValidSchema, isFeePayer] = await wrapTx(message.toString())
+                    assert.equal(isValidSchema, true, 'Wrong format schema tx')
                     assert.equal(isFeePayer, true, 'Payfor function failed')
-                    
+
                     const newNonce = await nocoin.getTransactionCount('pending')
                     console.log(`Nonce ${nonce} newNonce ${newNonce}`)
                     assert.equal(newNonce, nonce + 1, 'Nocoin tx failed')
@@ -70,24 +111,26 @@ describe("Integration test with chain", () => {
                     console.log(err)
                     reject()
                 }
-                
+
             })
-            
+
             const nonce = await nocoin.getTransactionCount('pending')
-            
+
             const tx = {
                 chainId,
-                to: dummy.address,
-                gasLimit: 21000,
+                to: sgold.address,
+                gasLimit: 400000,
                 gasPrice: 0,
                 nonce,
-                type: 0
+                data: sgold.interface.encodeFunctionData("transfer", [dummy.address, 1.1]),
             }
 
             await nocoin.sendTransaction(tx)
+
         })
 
     })
+
 })
 
 /*
