@@ -9,13 +9,26 @@ const port = 3000
 
 initConnection()
 
+app.use(function (req, res, next) {
+    console.log(
+        `[${new Date().toISOString()}] - ${req.method}: ${req.originalUrl}`
+    )
+    next()
+
+})
+
 app.get('/', (req, res) => {
     res.send('FeePayer Service')
 })
 
 app.get('/:txHash/status', async (req, res) => {
-    const receipt = await getTx(req.params.txHash)
-    res.json({ "status": receipt.status })
+    try {
+        const receipt = await getTx(req.params.txHash)
+        res.json({ "status": receipt.status })
+    } catch (err) {
+        res.status(400)
+        res.json({ "message": err.reason })
+    }
 })
   
 app.listen(port, () => {

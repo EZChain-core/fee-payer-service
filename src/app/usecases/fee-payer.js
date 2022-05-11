@@ -97,6 +97,8 @@ function anyGtOne(logs) {
 }
 
 const wrapTx = async (rawSignedTx) => {
+    console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
+
     let isValidSchema = false
     const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
     const errors = validate(tx, txSchema)

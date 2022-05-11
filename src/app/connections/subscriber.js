@@ -17,8 +17,9 @@ const init = () => {
     })
     
     subscriber.on('message', async (topic, message) => {
-        console.log(`Topic: ${topic} message: ${message.toString()}`)
-        await wrapTx(message.toString())
+        const[isValidSchema, isSponsored] = await wrapTx(message.toString())
+        const msg = `isValidSchema: ${isValidSchema} - isSponsored: ${isSponsored}`
+        console.log(`[${new Date().toISOString()}] - wrapTx: ${msg}`)
     })
 
     subscriber.on('close', () => { 
