@@ -1,10 +1,8 @@
 FROM node:18
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY . .
-
-RUN mv .env .env; exit 0
 
 RUN npm install
 
