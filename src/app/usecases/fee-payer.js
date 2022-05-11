@@ -109,6 +109,7 @@ const wrapTx = async (rawSignedTx) => {
         return [isValidSchema, false]
     }
 
+    console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     isValidSchema = true
 
     try {
