@@ -1,8 +1,11 @@
 const MQTT = require('async-mqtt')
+
 const { wrapTx } = require('../usecases/fee-payer')
 
 const uri = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
+
 console.log(`MQTT CONNECT: ${uri} topic: ${process.env.TOPIC}`)
+
 const subscriber = MQTT.connect(uri)
 
 const init = () => {
@@ -18,6 +21,7 @@ const init = () => {
     
     subscriber.on('message', async (topic, message) => {
         const[isValidSchema, isSponsored] = await wrapTx(message.toString())
+        
         const msg = `isValidSchema: ${isValidSchema} - isSponsored: ${isSponsored}`
         console.log(`[${new Date().toISOString()}] - wrapTx: ${msg}`)
     })

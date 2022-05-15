@@ -1,10 +1,12 @@
 
 const { initMQTTConn, closeMQTTConn } = require("./subscriber")
 const { initRedisConn, closeRedisConn } = require("./redis")
+const { initTxTable } = require('./mysql')
 
 const init = () => {
     initMQTTConn()
     initRedisConn()
+    initTxTable()
 }
 
 const close = () => {
@@ -14,5 +16,5 @@ const close = () => {
 
 module.exports = {
     initConnection: init,
-    closeConnection: close
+    closeConnection: close,
 }
