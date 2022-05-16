@@ -15,7 +15,7 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const { DISCARDED_STATUS, SENT_STATUS, ERROR_STATUS } = require('../utils/constants')
 
-const { mysqlCreateTx } = require('../connections/mysql')
+const { mysqlCreateTx, mysqlGetTxs } = require('../connections/mysql')
 
 const minFeeAlert = process.env.MINIMUM_FEE_ALERT
 const fetchBalanceTxTimes = process.env.FETCH_BALANCE_TX_TIMES
@@ -28,13 +28,11 @@ const SGOLD_CONTRACT = process.env.SGOLD_CONTRACT;
 
 const sgold = new ethers.Contract(SGOLD_CONTRACT, ERC20ABI, provider);
 
-
 const evmpp = createEVMPP(provider, {
     returns: {
         sponsor: ''
     },
 })
-
 
 const txSchema = {
     nonce: value => parseInt(value) === Number(value),
@@ -57,17 +55,35 @@ const validate = (object, schema) => Object
     .map(key => Error(`${key} is invalid.`))
 
 
-const validateTx = async (txHash) => {
-    const receipt = await provider.waitForTransaction(txHash)
-    if ((receipt.status === 1) && (receipt.logs.length > 0)) {
-        return true
-    }
-    return false
-}
-
 const getBalance = async (address) => {
     const balance = await provider.getBalance(address)
     return ethers.utils.formatEther(balance)
+}
+
+const getTxs = async (address, status, lastTime, limit) => {
+
+    let result = []
+    
+    const _statuses = status.split(",")
+    
+    const txs = await mysqlGetTxs(address, _statuses, lastTime, parseInt(limit))
+    for (i = 0; i < txs.length; i++) {
+        const tx = ethers.utils.parseTransaction(txs[i]["raw_sign_tx"])
+        result.push({
+            "tx": {
+                "to": tx["to"],
+                "value": tx["value"]["_hex"],
+                "v": tx["v"],
+                "r": tx["r"],
+                "s": tx["s"],
+            },
+            "status": txs[i]["status"],
+            "error": txs[i]["error"],
+            "created_at": txs[i]["created_at"],
+        })
+    }
+
+    return result
 }
 
 const handleAlert = async (address) => {
@@ -141,14 +157,20 @@ const _wrapTx = async (rawSignedTx) => {
 
 
 const wrapTx = async(rawSignedTx)=> {
+
     const [senderAddr, isValidSchema, isSponsored, status, error] = await _wrapTx(rawSignedTx)
-    await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
+
+    if (!!senderAddr) {
+        await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
+    } else {
+        console.log(`[${new Date().toISOString()}] - Address from is Null:`)
+    }
 
     return [isValidSchema, isSponsored]
 }
 
 module.exports = {
     wrapTx: wrapTx,
-    validateTx: validateTx,
-    getBalance: getBalance
+    getBalance: getBalance,
+    getTxs: getTxs
 }

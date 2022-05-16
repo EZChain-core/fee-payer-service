@@ -1,6 +1,6 @@
 const SENT_STATUS = 'send'
 const ERROR_STATUS = 'error'
-const DISCARDED_STATUS = 'discard'
+const DISCARDED_STATUS = 'discarded'
 
 module.exports = {
     SENT_STATUS,
