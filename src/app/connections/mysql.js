@@ -33,7 +33,7 @@ const TABLE_NAME = "transactions"
 const initTable = async () => {
     const sql = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         address varchar(50) NOT NULL,
-        raw_sign_tx varchar(250) DEFAULT NULL,
+        raw_sign_tx varchar(1024) DEFAULT NULL,
         status varchar(45) NOT NULL,
         error varchar(1024) DEFAULT NULL,
         created_at bigint NOT NULL,
