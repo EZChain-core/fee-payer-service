@@ -37,8 +37,7 @@ const initTable = async () => {
         status varchar(45) NOT NULL,
         error varchar(1024) DEFAULT NULL,
         created_at bigint NOT NULL,
-        PRIMARY KEY (address, created_at),
-        UNIQUE KEY raw_sign_tx_UNIQUE (raw_sign_tx)
+        PRIMARY KEY (address, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`
 
     const data = await pool.query(sql)
