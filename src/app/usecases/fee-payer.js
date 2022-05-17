@@ -1,9 +1,9 @@
 const { ethers, BigNumber } = require('ethers')
-const { abi } = require('../../abis/fee-payer.json');
 
 const { ERC20ABI } = require('../../abis/erc20.json');
 
 const { incrTxNum, getValue } = require('../connections/redis');
+
 const { sendAlert } = require('../connections/telegram');
 
 const { createEVMPP } = require('../../lib/evmpp')
@@ -12,7 +12,10 @@ const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
 const provider = new ethers.providers.JsonRpcProvider(RPC)
 
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-const contract = new ethers.Contract(process.env.ADDRESS, abi, wallet)
+
+const { DISCARDED_STATUS, SENT_STATUS, ERROR_STATUS } = require('../utils/constants')
+
+const { mysqlCreateTx, mysqlGetTxs } = require('../connections/mysql')
 
 const minFeeAlert = process.env.MINIMUM_FEE_ALERT
 const fetchBalanceTxTimes = process.env.FETCH_BALANCE_TX_TIMES
@@ -25,13 +28,11 @@ const SGOLD_CONTRACT = process.env.SGOLD_CONTRACT;
 
 const sgold = new ethers.Contract(SGOLD_CONTRACT, ERC20ABI, provider);
 
-
 const evmpp = createEVMPP(provider, {
     returns: {
         sponsor: ''
     },
 })
-
 
 const txSchema = {
     nonce: value => parseInt(value) === Number(value),
@@ -53,22 +54,36 @@ const validate = (object, schema) => Object
     .filter(key => !schema[key](object[key]))
     .map(key => Error(`${key} is invalid.`))
 
-const getTx = async (txHash) => {
-    const txReceipt = await provider.waitForTransaction(txHash)
-    return txReceipt
-}
-
-const validateTx = async (txHash) => {
-    const receipt = await provider.waitForTransaction(txHash)
-    if ((receipt.status === 1) && (receipt.logs.length > 0)) {
-        return true
-    }
-    return false
-}
 
 const getBalance = async (address) => {
     const balance = await provider.getBalance(address)
     return ethers.utils.formatEther(balance)
+}
+
+const getTxs = async (address, status, lastTime, limit) => {
+
+    let result = []
+    
+    const _statuses = status.split(",")
+    
+    const txs = await mysqlGetTxs(address, _statuses, lastTime, parseInt(limit))
+    for (i = 0; i < txs.length; i++) {
+        const tx = ethers.utils.parseTransaction(txs[i]["raw_sign_tx"])
+        result.push({
+            "tx": {
+                "to": tx["to"],
+                "value": tx["value"]["_hex"],
+                "v": tx["v"],
+                "r": tx["r"],
+                "s": tx["s"],
+            },
+            "status": txs[i]["status"],
+            "error": txs[i]["error"],
+            "created_at": txs[i]["created_at"],
+        })
+    }
+
+    return result
 }
 
 const handleAlert = async (address) => {
@@ -96,17 +111,18 @@ function anyGtOne(logs) {
     return false
 }
 
-const wrapTx = async (rawSignedTx) => {
+const _wrapTx = async (rawSignedTx) => {
     console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
 
     let isValidSchema = false
     const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
     const errors = validate(tx, txSchema)
     if (errors.length > 0) {
+        let _errors = ""
         for (const { message } of errors) {
-            console.log(message);
+            _errors = message + "\n"
         }
-        return [isValidSchema, false]
+        return [null, isValidSchema, false, ERROR_STATUS, _errors]
     }
 
     console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
@@ -118,11 +134,11 @@ const wrapTx = async (rawSignedTx) => {
         if (err.reason) {
             const result = JSON.parse(err.reason)
             if (result.err || !result.logs || !anyGtOne(result.logs)) {
-                return [isValidSchema, false]
+                return [tx["from"], isValidSchema, false, DISCARDED_STATUS, err.reason]
             }
         } else {
             console.error(err)
-            return [isValidSchema, false]
+            return [tx["from"], isValidSchema, false, ERROR_STATUS, err]
         }
     }
 
@@ -136,13 +152,25 @@ const wrapTx = async (rawSignedTx) => {
 
     await handleAlert(tx["from"])
 
-    return [isValidSchema, (nonce + 1) === newNonce]
+    return [tx["from"], isValidSchema, (nonce + 1) === newNonce, SENT_STATUS, null]
 }
 
 
+const wrapTx = async(rawSignedTx)=> {
+
+    const [senderAddr, isValidSchema, isSponsored, status, error] = await _wrapTx(rawSignedTx)
+
+    if (!!senderAddr) {
+        await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
+    } else {
+        console.log(`[${new Date().toISOString()}] - Address from is Null:`)
+    }
+
+    return [isValidSchema, isSponsored]
+}
+
 module.exports = {
-    getTx: getTx,
     wrapTx: wrapTx,
-    validateTx: validateTx,
-    getBalance: getBalance
+    getBalance: getBalance,
+    getTxs: getTxs
 }

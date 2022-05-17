@@ -1,6 +1,6 @@
 require('dotenv').config()
 
-const { getTx } = require('./usecases/fee-payer')
+const { getBalance, getTxs } = require('./usecases/fee-payer')
 const { initConnection, closeConnection } = require('./connections/index')
 
 const express = require('express')
@@ -21,16 +21,24 @@ app.get('/', (req, res) => {
     res.send('FeePayer Service')
 })
 
-app.get('/:txHash/status', async (req, res) => {
-    try {
-        const receipt = await getTx(req.params.txHash)
-        res.json({ "status": receipt.status })
-    } catch (err) {
-        res.status(400)
-        res.json({ "message": err.reason })
-    }
+app.get('/:address/balance',  async (req, res) => {
+    const balance = await getBalance(req.params.address)
+    res.json({ "balance": balance })
 })
   
+// /txs/:address?status=error,discarded,sent&last_time=0&limit=32
+app.get('/txs/:address', async (req, res) => {
+    const address = req.params.address
+    const lastTime = req.query.last_time || 0
+    const limit = req.query.limit || 30
+    const status = req.query.status
+    
+    const txs = await getTxs(address, status, lastTime, limit)
+
+    res.json({ "data": txs })
+    
+})
+
 app.listen(port, () => {
     console.log(`Fee payer service is listening on port ${port}`)
 })
