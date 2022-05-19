@@ -63,7 +63,7 @@ const createTx = async (addr, rawSignTx, txStatus, txError, createdAt) => {
 }
 
 const getTxs = async (addr, statuses, last_time, limit) => {
-    const sql = `SELECT * FROM ${TABLE_NAME} WHERE address = ? AND created_at > ? AND status IN (?) LIMIT ?`
+    const sql = `SELECT * FROM ${TABLE_NAME} WHERE address = ? AND created_at < ? AND status IN (?) ORDER BY created_at desc LIMIT ?`
     return await pool.query(sql, [addr, last_time, statuses, limit])
 }
 

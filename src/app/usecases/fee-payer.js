@@ -63,20 +63,18 @@ const getBalance = async (address) => {
 const getTxs = async (address, status, lastTime, limit) => {
 
     let result = []
-    
+
     const _statuses = status.split(",")
+
+    if (lastTime == 0) {
+        lastTime = Date.now()
+    }
     
     const txs = await mysqlGetTxs(address, _statuses, lastTime, parseInt(limit))
     for (i = 0; i < txs.length; i++) {
         const tx = ethers.utils.parseTransaction(txs[i]["raw_sign_tx"])
         result.push({
-            "tx": {
-                "to": tx["to"],
-                "value": tx["value"]["_hex"],
-                "v": tx["v"],
-                "r": tx["r"],
-                "s": tx["s"],
-            },
+            "tx": tx,
             "status": txs[i]["status"],
             "error": txs[i]["error"],
             "created_at": txs[i]["created_at"],
