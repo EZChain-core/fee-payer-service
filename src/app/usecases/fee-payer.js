@@ -73,6 +73,9 @@ const getTxs = async (address, status, lastTime, limit) => {
     const txs = await mysqlGetTxs(address, _statuses, lastTime, parseInt(limit))
     for (i = 0; i < txs.length; i++) {
         const tx = ethers.utils.parseTransaction(txs[i]["raw_sign_tx"])
+        tx["gasPrice"] = tx["gasPrice"].toString()
+        tx["gasLimit"] = tx["gasLimit"].toString()
+        tx["value"] = tx["value"].toString()
         result.push({
             "tx": tx,
             "status": txs[i]["status"],
