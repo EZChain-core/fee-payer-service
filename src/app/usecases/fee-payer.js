@@ -113,54 +113,55 @@ function anyGtOne(logs) {
 }
 
 const _wrapTx = async (rawSignedTx) => {
-    try {
-        
-        console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
+ 
+    console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
 
-        let isValidSchema = false
-        const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
-        const errors = validate(tx, txSchema)
-        if (errors.length > 0) {
-            let _errors = ""
-            for (const { message } of errors) {
-                _errors = message + "\n"
-            }
-            return [null, isValidSchema, false, ERROR_STATUS, _errors]
+    let isValidSchema = false
+    tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
+    const errors = validate(tx, txSchema)
+    if (errors.length > 0) {
+        let _errors = ""
+        for (const { message } of errors) {
+            _errors = message + "\n"
         }
+        return [null, isValidSchema, false, ERROR_STATUS, _errors]
+    }
 
-        console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
-        isValidSchema = true
+    console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
+    isValidSchema = true
 
-        try {
-            await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
-        } catch (err) {
-            if (err.reason) {
+    try {
+        await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
+    } catch (err) {
+        if (err.reason) {
+            try {
                 const result = JSON.parse(err.reason)
                 if (result.err || !result.logs || !anyGtOne(result.logs)) {
                     return [tx["from"], isValidSchema, false, DISCARDED_STATUS, err.reason]
                 }
-            } else {
-                console.error(err)
-                return [tx["from"], isValidSchema, false, ERROR_STATUS, err]
+            } catch (error) {
+                console.log(error)
+                return [tx["from"], isValidSchema, false, DISCARDED_STATUS, err.reason]
             }
+            
+        } else {
+            console.error(err)
+            return [tx["from"], isValidSchema, false, ERROR_STATUS, err]
         }
-
-        const nonce = await wallet.getTransactionCount('pending')
-
-        const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
-
-        await res.wait(1);
-
-        const newNonce = await wallet.getTransactionCount('pending')
-
-        await handleAlert(tx["from"])
-
-        return [tx["from"], isValidSchema, (nonce + 1) === newNonce, SENT_STATUS, null]
-
-    } catch (err) {
-        console.error(err)
-        return [tx["from"], isValidSchema, false, ERROR_STATUS, err]
     }
+
+    const nonce = await wallet.getTransactionCount('pending')
+
+    const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
+
+    await res.wait(1);
+
+    const newNonce = await wallet.getTransactionCount('pending')
+
+    await handleAlert(tx["from"])
+
+    return [tx["from"], isValidSchema, (nonce + 1) === newNonce, SENT_STATUS, null]
+
 }
 
 
