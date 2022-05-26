@@ -117,7 +117,7 @@ const _wrapTx = async (rawSignedTx) => {
     console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
 
     let isValidSchema = false
-    tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
+    const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
     const errors = validate(tx, txSchema)
     if (errors.length > 0) {
         let _errors = ""
@@ -165,7 +165,7 @@ const _wrapTx = async (rawSignedTx) => {
 }
 
 
-const wrapTx = async(rawSignedTx)=> {
+const wrapTx = async (rawSignedTx) => {
 
     const [senderAddr, isValidSchema, isSponsored, status, error] = await _wrapTx(rawSignedTx)
 
