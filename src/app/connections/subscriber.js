@@ -20,9 +20,9 @@ const init = () => {
     })
     
     subscriber.on('message', async (topic, message) => {
-        const[isValidSchema, isSponsored] = await wrapTx(message.toString())
+        const[isValidSchema, nonce] = await wrapTx(message.toString())
         
-        const msg = `isValidSchema: ${isValidSchema} - isSponsored: ${isSponsored}`
+        const msg = `isValidSchema: ${isValidSchema} - sponsored at nonce: ${nonce}`
         console.log(`[${new Date().toISOString()}] - wrapTx: ${msg}`)
     })
 
