@@ -124,7 +124,7 @@ const _wrapTx = async (rawSignedTx) => {
         for (const { message } of errors) {
             _errors = message + "\n"
         }
-        return [null, isValidSchema, false, ERROR_STATUS, _errors]
+        return [null, isValidSchema, -1, ERROR_STATUS, _errors]
     }
 
     console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
@@ -141,33 +141,36 @@ const _wrapTx = async (rawSignedTx) => {
                 }
             } catch (error) {
                 console.log(error)
-                return [tx["from"], isValidSchema, false, DISCARDED_STATUS, err.reason]
+                return [tx["from"], isValidSchema, -1, DISCARDED_STATUS, err.reason]
             }
             
         } else {
             console.error(err)
-            return [tx["from"], isValidSchema, false, ERROR_STATUS, err]
+            return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
         }
     }
 
     const nonce = await wallet.getTransactionCount('pending')
 
-    const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
+    try {
+        const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
+        await res.wait(1);
+    } catch (err) {
+        return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
+    }
 
-    await res.wait(1);
 
-    const newNonce = await wallet.getTransactionCount('pending')
+    // const newNonce = await wallet.getTransactionCount('pending')
 
     await handleAlert(tx["from"])
 
-    return [tx["from"], isValidSchema, (nonce + 1) === newNonce, SENT_STATUS, null]
+    return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
 
 }
 
 
 const wrapTx = async (rawSignedTx) => {
-
-    const [senderAddr, isValidSchema, isSponsored, status, error] = await _wrapTx(rawSignedTx)
+    const [senderAddr, isValidSchema, nonce, status, error] = await _wrapTx(rawSignedTx)
 
     if (!!senderAddr) {
         await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
@@ -175,7 +178,7 @@ const wrapTx = async (rawSignedTx) => {
         console.log(`[${new Date().toISOString()}] - Address from is Null:`)
     }
 
-    return [isValidSchema, isSponsored]
+    return [isValidSchema, nonce]
 }
 
 module.exports = {
