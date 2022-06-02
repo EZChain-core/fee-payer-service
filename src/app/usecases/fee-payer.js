@@ -162,7 +162,7 @@ const _wrapTx = async (rawSignedTx) => {
 
     // const newNonce = await wallet.getTransactionCount('pending')
 
-    await handleAlert(tx["from"])
+    // await handleAlert(tx["from"])
 
     return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
 
