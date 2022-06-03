@@ -1,3 +1,7 @@
+const Queue = require('bee-queue');
+
+const queue = new Queue('wrap-tx-queue');
+
 const MQTT = require('async-mqtt')
 
 const { wrapTx } = require('../usecases/fee-payer')
@@ -18,26 +22,63 @@ const init = () => {
             console.log(`Subscriber connected`)
         })
     })
-    
+
     subscriber.on('message', async (topic, message) => {
-        const[isValidSchema, nonce] = await wrapTx(message.toString())
-        
-        const msg = `isValidSchema: ${isValidSchema} - sponsored at nonce: ${nonce}`
-        console.log(`[${new Date().toISOString()}] - wrapTx: ${msg}`)
+
+        const job = queue.createJob({ message: message.toString() });
+        job.save();
+        job.on('succeeded', (result) => {
+            console.log(`Received result for job ${job.id}: ${result}`);
+        });
+
     })
 
-    subscriber.on('close', () => { 
-        console.log('Connection closed by subscriber') 
-    }) 
+    subscriber.on('close', () => {
+        console.log('Connection closed by subscriber')
+    })
 
-    subscriber.on('reconnect', () => { 
-        console.log('Subscriber trying a reconnection') 
-    }) 
+    subscriber.on('reconnect', () => {
+        console.log('Subscriber trying a reconnection')
+    })
 }
 
 const close = () => {
     subscriber.end()
 }
+
+
+// Process jobs from as many servers or processes as you like
+queue.process(async (job) => {
+    console.log(`Processing job ${job.id}`);
+    const [isValidSchema, nonce] = await wrapTx(job.data.message)
+
+    const msg = `isValidSchema: ${isValidSchema} - sponsored at nonce: ${nonce}`
+    console.log(`[${new Date().toISOString()}] - wrapTx: ${msg}`)
+
+    return nonce;
+});
+
+queue.on('failed', (job, err) => {
+    console.log(`Job ${job.id} failed with error ${err.message}`);
+});
+
+queue.on('stalled', (jobId) => {
+    console.log(`Job ${jobId} stalled and will be reprocessed`);
+});
+
+queue.on('retrying', (job, err) => {
+    console.log(
+        `Job ${job.id} failed with error ${err.message} but is being retried!`
+    );
+});
+
+queue.on('succeeded', (job, result) => {
+    console.log(`Job ${job.id} succeeded with result: ${result}`);
+});
+
+queue.on('error', (err) => {
+    console.log(`A queue error happened: ${err.message}`);
+});
 
 module.exports = {
     initMQTTConn: init,
