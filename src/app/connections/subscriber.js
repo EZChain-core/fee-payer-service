@@ -1,6 +1,26 @@
 const Queue = require('bee-queue');
 
-const queue = new Queue('wrap-tx-queue');
+const queue = new Queue('wrap-tx-queue', {
+    prefix: 'bq',
+    stallInterval: 5000,
+    nearTermWindow: 1200000,
+    delayedDebounce: 1000,
+    redis: {
+        host: process.env.REDIS_HOST || "localhost",
+        port: process.env.REDIS_PORT || 6379,
+        db: process.env.REDIS_DB || 0,
+        options: {},
+    },
+    isWorker: true,
+    getEvents: true,
+    sendEvents: true,
+    storeJobs: true,
+    ensureScripts: true,
+    activateDelayedJobs: false,
+    removeOnSuccess: false,
+    removeOnFailure: false,
+    redisScanCount: 100,
+});
 
 const MQTT = require('async-mqtt')
 
