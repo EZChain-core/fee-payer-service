@@ -1,17 +1,18 @@
 const { ethers, BigNumber } = require('ethers')
 
-const { ERC20ABI } = require('../../abis/erc20.json');
+const { NonceManager } = require("@ethersproject/experimental")
 
-const { incrTxNum, getValue } = require('../connections/redis');
+const { ERC20ABI } = require('../../abis/erc20.json')
 
-const { sendAlert } = require('../connections/telegram');
+const { incrTxNum, getValue } = require('../connections/redis')
+
+const { sendAlert } = require('../connections/telegram')
 
 const { createEVMPP } = require('../../lib/evmpp')
 
 const RPC = process.env.RPC || "http://localhost:9650/ext/bc/C/rpc"
-const provider = new ethers.providers.JsonRpcProvider(RPC)
 
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const provider = new ethers.providers.JsonRpcProvider(RPC)
 
 const { DISCARDED_STATUS, SENT_STATUS, ERROR_STATUS } = require('../utils/constants')
 
@@ -24,15 +25,33 @@ const callLogsAccessList = [{
     storageKeys: ["0x5555555555555555555555555555555555555555555555555555555555555555"],
 }]
 
-const SGOLD_CONTRACT = process.env.SGOLD_CONTRACT;
+const SGOLD_CONTRACT = process.env.SGOLD_CONTRACT
 
-const sgold = new ethers.Contract(SGOLD_CONTRACT, ERC20ABI, provider);
+const sgold = new ethers.Contract(SGOLD_CONTRACT, ERC20ABI, provider)
 
 const evmpp = createEVMPP(provider, {
     returns: {
         sponsor: ''
     },
 })
+
+const privateKeys = process.env.PRIVATE_KEYS.split(",")
+
+var wallets = {}
+var txCount = {}
+
+const initWallets = async () => {
+    for (let i  = 0; i < privateKeys.length; i++) {
+        console.log(`${i}: ${privateKeys[i]}`)
+        const w = new NonceManager(new ethers.Wallet(privateKeys[i], provider))
+        const address = await w.getAddress()
+        wallets[address] = w
+        txCount[address] = 0
+    }
+
+    console.log(`Wallets size: ${privateKeys.length}`)
+    console.log(`txCount size: ${privateKeys.length}`)
+}
 
 const txSchema = {
     nonce: value => parseInt(value) === Number(value),
@@ -60,6 +79,16 @@ const getBalance = async (address) => {
     return ethers.utils.formatEther(balance)
 }
 
+const getWallet = async () => {
+    let arr = Object.values(txCount)
+    let min = Math.min(...arr)
+    const address = Object.keys(txCount).find(key => txCount[key] === min)
+    txCount[address] += 1
+
+    console.log(`Get Wallet ${address} with tx count: ${min}`)
+    return wallets[address]
+}
+
 const getTxs = async (address, status, lastTime, limit) => {
 
     let result = []
@@ -71,7 +100,7 @@ const getTxs = async (address, status, lastTime, limit) => {
     }
     
     const txs = await mysqlGetTxs(address, _statuses, lastTime, parseInt(limit))
-    for (i = 0; i < txs.length; i++) {
+    for (let i = 0; i < txs.length; i++) {
         const tx = ethers.utils.parseTransaction(txs[i]["raw_sign_tx"])
         tx["gasPrice"] = tx["gasPrice"].toString()
         tx["gasLimit"] = tx["gasLimit"].toString()
@@ -104,7 +133,7 @@ function anyGtOne(logs) {
             continue
         }
 
-        const logDesc = sgold.interface.parseLog({ topics: log.topics, data: log.data });
+        const logDesc = sgold.interface.parseLog({ topics: log.topics, data: log.data })
         if (logDesc.name == 'Transfer' && logDesc.args[2].gt(0)) {
             return true
         }
@@ -149,16 +178,18 @@ const _wrapTx = async (rawSignedTx) => {
             return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
         }
     }
+    
+    const wallet = await getWallet()
 
     const nonce = await wallet.getTransactionCount('pending')
 
     try {
         const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
-        await res.wait(1);
+        await res.wait(1)
     } catch (err) {
+        console.log(`HIHI Error: ${err} `)
         return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
     }
-
 
     // const newNonce = await wallet.getTransactionCount('pending')
 
@@ -184,5 +215,6 @@ const wrapTx = async (rawSignedTx) => {
 module.exports = {
     wrapTx: wrapTx,
     getBalance: getBalance,
-    getTxs: getTxs
+    getTxs: getTxs,
+    initWallets: initWallets
 }
