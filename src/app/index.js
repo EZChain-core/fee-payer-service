@@ -1,6 +1,6 @@
 require('dotenv').config()
 
-const { getBalance, getTxs } = require('./usecases/fee-payer')
+const { getBalance, getTxs, getTx, initWallets } = require('./usecases/fee-payer')
 const { initConnection, closeConnection } = require('./connections/index')
 
 const express = require('express')
@@ -8,6 +8,8 @@ const app = express()
 const port = 3000
 
 initConnection()
+
+initWallets()
 
 app.use(function (req, res, next) {
     console.log(
@@ -17,8 +19,8 @@ app.use(function (req, res, next) {
 
 })
 
-app.get('/', (req, res) => {
-    res.send('FeePayer Service')
+app.get('/', async (req, res) => {
+    res.send('FeePayer Service') 
 })
 
 app.get('/:address/balance',  async (req, res) => {
