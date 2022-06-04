@@ -91,6 +91,8 @@ const getWallet = async () => {
     const address = Object.keys(txCount).find(key => txCount[key] === min)
     txCount[address] += 1
 
+    walletNonces[address] += 1
+
     console.log(`Get Wallet ${address} with tx count: ${min}`)
     return wallets[address]
 }
@@ -199,8 +201,6 @@ const _wrapTx = async (rawSignedTx) => {
         console.log(`HIHI Error: ${err} `)
         return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
     }
-
-    walletNonces[wallet.address] += 1
 
     // const newNonce = await wallet.getTransactionCount('pending')
 
