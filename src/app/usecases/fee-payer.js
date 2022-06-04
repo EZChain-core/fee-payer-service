@@ -50,7 +50,7 @@ const initWallets = async () => {
         txCount[w.address] = 0
 
         const nonce = await w.getTransactionCount('pending')
-        walletNonces[w.address] = nonce
+        walletNonces[w.address] = nonce - 1
 
         console.log(`${i}: ${w.address} - ${nonce}`)
     }
