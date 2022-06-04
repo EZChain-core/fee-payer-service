@@ -143,7 +143,7 @@ function anyGtOne(logs) {
 
 const _wrapTx = async (rawSignedTx) => {
  
-    console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
+    // console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
 
     let isValidSchema = false
     const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
@@ -156,7 +156,7 @@ const _wrapTx = async (rawSignedTx) => {
         return [null, isValidSchema, -1, ERROR_STATUS, _errors]
     }
 
-    console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
+    // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     isValidSchema = true
 
     try {
@@ -194,6 +194,7 @@ const _wrapTx = async (rawSignedTx) => {
     // const newNonce = await wallet.getTransactionCount('pending')
 
     // await handleAlert(tx["from"])
+    // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
 
     return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
 
@@ -203,6 +204,7 @@ const _wrapTx = async (rawSignedTx) => {
 const wrapTx = async (rawSignedTx) => {
     const [senderAddr, isValidSchema, nonce, status, error] = await _wrapTx(rawSignedTx)
 
+    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${senderAddr} - ${nonce}`)
     if (!!senderAddr) {
         await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
     } else {
