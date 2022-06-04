@@ -162,7 +162,8 @@ const _wrapTx = async (rawSignedTx) => {
     const wallet = await getWallet()
     const nonce = await wallet.getTransactionCount('pending')
 
-    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${tx["from"]} - ${nonce}`)
+    const addr = await wallet.getAddress()
+    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${addr} - ${nonce}`)
 
     try {
         await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
