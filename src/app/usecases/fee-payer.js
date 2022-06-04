@@ -41,14 +41,18 @@ const privateKeys = process.env.PRIVATE_KEYS.split(",")
 
 var wallets = {}
 var txCount = {}
+var walletNonces = {}
 
 const initWallets = async () => {
     for (let i  = 0; i < privateKeys.length; i++) {
-        console.log(`${i}: ${privateKeys[i]}`)
-        const w = new NonceManager(new ethers.Wallet(privateKeys[i], provider))
-        const address = await w.getAddress()
-        wallets[address] = w
-        txCount[address] = 0
+        const w = new ethers.Wallet(privateKeys[i], provider)
+        wallets[w.address] = w
+        txCount[w.address] = 0
+
+        const nonce = await w.getTransactionCount('pending')
+        walletNonces[w.address] = nonce
+
+        console.log(`${i}: ${w.address} - ${nonce}`)
     }
 
     console.log(`Wallets size: ${privateKeys.length}`)
@@ -162,10 +166,11 @@ const _wrapTx = async (rawSignedTx) => {
     isValidSchema = true
 
     const wallet = await getWallet()
-    const nonce = await wallet.getTransactionCount('pending')
+    // const nonce = await wallet.getTransactionCount('pending')
 
-    const addr = await wallet.getAddress()
-    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${addr} - ${nonce}`)
+    const nonce = walletNonces[wallet.address]
+
+    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${wallet.address} - ${nonce}`)
 
     try {
         await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
@@ -187,22 +192,23 @@ const _wrapTx = async (rawSignedTx) => {
         }
     }
     
-    
-
     try {
-        const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
+        const res = await evmpp.connect(wallet).sponsor(rawSignedTx, { nonce })
         await res.wait(1)
     } catch (err) {
         console.log(`HIHI Error: ${err} `)
         return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
     }
 
+    walletNonces[wallet.address] += 1
+
     // const newNonce = await wallet.getTransactionCount('pending')
 
     // await handleAlert(tx["from"])
+
     // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     
-    await sleep(50)
+    // await sleep(50)
 
     return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
 }
