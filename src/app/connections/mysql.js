@@ -45,10 +45,10 @@ const initTable = async () => {
 }
 
 const createTx = async (addr, rawSignTx, txStatus, txError, createdAt) => {
-    console.log(
-        `[${new Date().toISOString()}] - Create tx - 
-        addr: ${addr}, rawSignTx: ${rawSignTx}, txStatus: ${txStatus}`
-    )
+    // console.log(
+    //     `[${new Date().toISOString()}] - Create tx - 
+    //     addr: ${addr}, rawSignTx: ${rawSignTx}, txStatus: ${txStatus}`
+    // )
 
     const tx = {
         'address': addr,
