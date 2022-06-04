@@ -159,6 +159,10 @@ const _wrapTx = async (rawSignedTx) => {
     // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     isValidSchema = true
 
+    const nonce = await wallet.getTransactionCount('pending')
+
+    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${senderAddr} - ${nonce}`)
+    
     try {
         await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
     } catch (err) {
@@ -181,8 +185,6 @@ const _wrapTx = async (rawSignedTx) => {
     
     const wallet = await getWallet()
 
-    const nonce = await wallet.getTransactionCount('pending')
-
     try {
         const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
         await res.wait(1)
@@ -204,7 +206,6 @@ const _wrapTx = async (rawSignedTx) => {
 const wrapTx = async (rawSignedTx) => {
     const [senderAddr, isValidSchema, nonce, status, error] = await _wrapTx(rawSignedTx)
 
-    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${senderAddr} - ${nonce}`)
     if (!!senderAddr) {
         await mysqlCreateTx(senderAddr, rawSignedTx, status, JSON.stringify(error), Date.now())
     } else {
