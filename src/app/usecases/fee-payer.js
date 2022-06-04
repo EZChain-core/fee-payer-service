@@ -159,10 +159,11 @@ const _wrapTx = async (rawSignedTx) => {
     // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     isValidSchema = true
 
+    const wallet = await getWallet()
     const nonce = await wallet.getTransactionCount('pending')
 
-    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${senderAddr} - ${nonce}`)
-    
+    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${tx["from"]} - ${nonce}`)
+
     try {
         await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
     } catch (err) {
@@ -183,7 +184,7 @@ const _wrapTx = async (rawSignedTx) => {
         }
     }
     
-    const wallet = await getWallet()
+    
 
     try {
         const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
