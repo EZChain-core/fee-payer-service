@@ -35,6 +35,8 @@ const evmpp = createEVMPP(provider, {
     },
 })
 
+const sleep = (waitTimeInMs) => new Promise(resolve => setTimeout(resolve, waitTimeInMs));
+
 const privateKeys = process.env.PRIVATE_KEYS.split(",")
 
 var wallets = {}
@@ -199,9 +201,10 @@ const _wrapTx = async (rawSignedTx) => {
 
     // await handleAlert(tx["from"])
     // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
+    
+    await sleep(50)
 
     return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
-
 }
 
 
