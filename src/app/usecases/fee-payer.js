@@ -1,4 +1,4 @@
-const { ethers, BigNumber } = require('ethers')
+const { ethers } = require('ethers')
 
 const { NonceManager } = require("@ethersproject/experimental")
 
@@ -41,22 +41,18 @@ const privateKeys = process.env.PRIVATE_KEYS.split(",")
 
 var wallets = {}
 var txCount = {}
-var walletNonces = {}
 
 const initWallets = async () => {
     for (let i  = 0; i < privateKeys.length; i++) {
-        const w = new ethers.Wallet(privateKeys[i], provider)
-        wallets[w.address] = w
-        txCount[w.address] = 0
+        const w = new NonceManager(new ethers.Wallet(privateKeys[i], provider))
+        const address = await w.getAddress()
+        wallets[address] = w
+        txCount[address] = 0
 
-        const nonce = await w.getTransactionCount('pending')
-        walletNonces[w.address] = nonce - 1
-
-        console.log(`${i}: ${w.address} - ${nonce}`)
+        console.log(`${i}: ${address}`)
     }
 
     console.log(`Wallets size: ${privateKeys.length}`)
-    console.log(`txCount size: ${privateKeys.length}`)
 }
 
 const txSchema = {
@@ -90,8 +86,6 @@ const getWallet = async () => {
     let min = Math.min(...arr)
     const address = Object.keys(txCount).find(key => txCount[key] === min)
     txCount[address] += 1
-
-    walletNonces[address] += 1
 
     console.log(`Get Wallet ${address} with tx count: ${min}`)
     return wallets[address]
@@ -151,7 +145,7 @@ function anyGtOne(logs) {
 
 const _wrapTx = async (rawSignedTx) => {
  
-    // console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
+    console.log(`[${new Date().toISOString()}] - rawSignedTx: ${rawSignedTx}`)
 
     let isValidSchema = false
     const tx = ethers.utils.parseTransaction(`${rawSignedTx}`)
@@ -164,15 +158,9 @@ const _wrapTx = async (rawSignedTx) => {
         return [null, isValidSchema, -1, ERROR_STATUS, _errors]
     }
 
-    // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
     isValidSchema = true
 
     const wallet = await getWallet()
-    // const nonce = await wallet.getTransactionCount('pending')
-
-    const nonce = walletNonces[wallet.address]
-
-    console.log(`[${new Date().toISOString()}] - STRESS TEST : ${wallet.address} - ${nonce}`)
 
     try {
         await evmpp.callStatic.sponsor(rawSignedTx, { accessList: callLogsAccessList })
@@ -195,21 +183,16 @@ const _wrapTx = async (rawSignedTx) => {
     }
     
     try {
-        const res = await evmpp.connect(wallet).sponsor(rawSignedTx, { nonce })
+        const res = await evmpp.connect(wallet).sponsor(rawSignedTx)
         await res.wait(1)
     } catch (err) {
-        console.log(`HIHI Error: ${err} `)
         return [tx["from"], isValidSchema, -1, ERROR_STATUS, err]
     }
 
-    // const newNonce = await wallet.getTransactionCount('pending')
+    await handleAlert(tx["from"])
 
-    // await handleAlert(tx["from"])
-
-    // console.log(`[${new Date().toISOString()}] - Tx: ${JSON.stringify(tx)}`)
+    const nonce = await wallet.getTransactionCount('pending')
     
-    // await sleep(50)
-
     return [tx["from"], isValidSchema, nonce, SENT_STATUS, null]
 }
 
